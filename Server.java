@@ -15,17 +15,17 @@ public class Server {
     public void openServer(){
         try{
             while (!socket.isClosed()){
-                Socket clientSocket = Socket (socket.accept());
+                Socket clientSocket = socket.accept();
                 System.out.println("user has connected");
                 ClientHandler clientHandler = new ClientHandler(clientSocket);
 
 
                 Thread thread = new Thread(clientHandler);
-                thread.start();
+                thread.start();    
             }
         }
         catch(IOException e){
-
+            e.printStackTrace();
         }
 
     }
@@ -45,9 +45,14 @@ public class Server {
 
     //main
     public static void main (String[] args){
-        ServerSocket serverSocket = new ServerSocket(1515);
+        try{
+        ServerSocket serverSocket = new ServerSocket(1234);
         Server server = new Server(serverSocket);
         server.openServer();
+        }
+        catch(IOException e){
+            e.printStackTrace();
+        }
     }
 
 
