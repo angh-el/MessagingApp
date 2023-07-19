@@ -91,6 +91,62 @@ public class Client{
     }
 
 
+    public static String decryptIP(String ipAddress){
+        // System.out.println("Your IP address: " + ipAddress);
+        
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (int i = 0; i < ipAddress.length(); i++){
+            char chr = ipAddress.charAt(i);
+            if (chr == 'f'){
+                stringBuilder.append('0');
+            }
+            if (chr == 'D'){
+                stringBuilder.append('1');
+            }
+            if (chr == '4'){
+                stringBuilder.append('2');
+            }
+            if (chr == 'Z'){
+                stringBuilder.append('3');
+            }
+            if (chr == 'L'){
+                stringBuilder.append('4');
+            }
+            if (chr == 'U'){
+                stringBuilder.append('5');
+            }
+            if (chr == 'y'){
+                stringBuilder.append('6');
+            }
+            if (chr == 'e'){
+                stringBuilder.append('7');
+            }
+            if (chr == 'Q'){
+                stringBuilder.append('8');
+            }
+            if (chr == 'o'){
+                stringBuilder.append('9');
+            }
+            if (chr == 'R'){
+                stringBuilder.append('.');
+            }
+            // else{
+            //     stringBuilder.append(chr);
+            // }
+
+
+
+
+        }
+        ipAddress = stringBuilder.toString();
+
+        // System.out.println("Your IP address: " + ipAddress);
+
+        return ipAddress;
+    }
+
+
 
     public static void main (String[] args){
 
@@ -98,10 +154,19 @@ public class Client{
         try{
         Scanner scanner = new Scanner (System.in);
 
+        System.out.println("Enter the room code");
+        String ipAddress = scanner.nextLine();
+
+        ipAddress = decryptIP(ipAddress);
+
         System.out.println("Enter Username");
         String username = scanner.nextLine();
 
-        Socket socket = new Socket ("localhost", 1234);
+        
+        
+        // Socket socket = new Socket ("localhost", 1234);
+        Socket socket = new Socket (ipAddress, 1234);
+        // Socket socket = new Socket ("w232esd.303", 1234);
 
         Client client = new Client (socket, username);
 
