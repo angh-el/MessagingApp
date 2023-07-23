@@ -4,13 +4,21 @@ import java.io.BufferedWriter;
 import java.io.BufferedReader;
 import java.util.Scanner;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class Client{
     
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
+    
+    
     private String username;
+    private String roomCode;
+
 
 
     public Client (Socket socket, String username){
@@ -147,37 +155,144 @@ public class Client{
     }
 
 
+    // public static String getRoomCode(){
+    //     return roomCode;
+    // }
 
-    public static void main (String[] args){
+
+    // public static String[] get_data(String username, String ipAddress){
+    //     String[] data = new String[2]
+
+    //     //index 0 is username
+    //     //index 1 is ip
+
+    //     data[0];
+
+    // }
+
+    // public static void setData(String username, String ipAddress){
+    //     this.username = username;
+    //     this.ipAddress = getRoomCode();
+    // }
 
 
+
+public static void loginWindow() {
+    JFrame frame = new JFrame("Connect");
+    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    frame.setSize(300, 200); // Set window size
+
+    // Create a JPanel to hold the components
+    JPanel panel = new JPanel();
+
+    // Create JLabels for the username and room code input boxes
+    JLabel usernameLabel = new JLabel("Username:");
+    JLabel roomCodeLabel = new JLabel("Room Code:");
+
+    // Create JTextFields for username and room code
+    JTextField usernameField = new JTextField(20);
+    JTextField roomCodeField = new JTextField(20);
+
+    // Create a JLabel for displaying the error message
+    JLabel errorLabel = new JLabel();
+    errorLabel.setForeground(Color.RED); // Set the color to red
+
+    JButton connectButton = new JButton("Connect");
+    connectButton.addActionListener(new ActionListener() {
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            String username = usernameField.getText();
+            String roomCode = roomCodeField.getText();
+
+            if (username.isEmpty() || roomCode.isEmpty()) {
+                // Display the error message and do not close the window
+                errorLabel.setText("Error: Username and Room Code are required.");
+            } else {
+                // Clear the error message and close the window
+                errorLabel.setText("");
+                frame.dispose();
+                connect(username, roomCode);
+            }
+        }
+    });
+
+    // Add components to the panel
+    panel.add(usernameLabel);
+    panel.add(usernameField);
+    panel.add(roomCodeLabel);
+    panel.add(roomCodeField);
+    panel.add(connectButton);
+
+    // Add the error label to the panel
+    panel.add(errorLabel);
+
+    frame.add(panel);
+
+    frame.setLocationRelativeTo(null);
+
+    frame.setVisible(true);
+}
+
+
+
+
+
+    public static void connect(String username, String ipAddress){
+        
         try{
-        Scanner scanner = new Scanner (System.in);
-
-        System.out.println("Enter the room code");
-        String ipAddress = scanner.nextLine();
-
-        ipAddress = decryptIP(ipAddress);
-
-        System.out.println("Enter Username");
-        String username = scanner.nextLine();
-
-        
-        
-        // Socket socket = new Socket ("localhost", 1234);
-        Socket socket = new Socket (ipAddress, 1234);
-        // Socket socket = new Socket ("w232esd.303", 1234);
-
+        Socket socket = new Socket (decryptIP(ipAddress), 1234);
         Client client = new Client (socket, username);
+
 
         client.waitMessage();
         client.sendMessage();
 
         }
-
         catch (IOException e){
             e.printStackTrace();
         }
+
+    }
+
+
+    public static void main (String[] args){
+
+
+        // try{
+
+        loginWindow();
+
+        // Scanner scanner = new Scanner (System.in);
+
+        // System.out.println("Enter the room code");
+        // String ipAddress = scanner.nextLine();
+
+        // ipAddress = decryptIP(ipAddress);
+
+
+        // // roomCode = decryptIP(roomCode);
+
+        // System.out.println("Enter Username");
+        // String username = scanner.nextLine();
+
+        
+        
+        // // Socket socket = new Socket ("localhost", 1234);
+        // Socket socket = new Socket (ipAddress, 1234);
+        // // Socket socket = new Socket ("w232esd.303", 1234);
+
+        // // Socket socket = new Socket (roomCode, 1234);
+
+        // Client client = new Client (socket, username);
+
+        // client.waitMessage();
+        // client.sendMessage();
+
+        // }
+
+        // catch (IOException e){
+        //     e.printStackTrace();
+        // }
 
 
     }

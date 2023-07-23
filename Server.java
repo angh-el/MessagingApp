@@ -4,6 +4,13 @@ import java.net.Socket;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;;
+
 public class Server {
 
     private ServerSocket socket;
@@ -14,7 +21,10 @@ public class Server {
 
 
     //keep the server running while socket is not clossed
-    public void openServer(){
+    public void openServer(String ipAddress){
+        
+        openWindow(encryptIP(ipAddress));
+        
         try{
             while (!socket.isClosed()){
                 Socket clientSocket = socket.accept();
@@ -100,6 +110,40 @@ public class Server {
     }
 
 
+    public void openWindow(String ipAddress){
+        JFrame frame = new JFrame("Server");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // Create a JLabel to display the text
+        String text = "This is the room code: " + ipAddress;
+        JLabel label = new JLabel(text, SwingConstants.CENTER);
+        label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+
+        JScrollPane scrollPane = new JScrollPane(label);
+        scrollPane.setPreferredSize(new Dimension(300, 100));
+
+        // Create a button to copy the text
+        JButton copyButton = new JButton("Copy Code");
+        copyButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                StringSelection selection = new StringSelection(ipAddress);
+                Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clipboard.setContents(selection, selection);
+            }
+        });
+
+        // Add the scrollPane and the copyButton to the JFrame
+        frame.add(scrollPane, BorderLayout.CENTER);
+        frame.add(copyButton, BorderLayout.SOUTH);
+
+        frame.pack();
+
+
+        frame.setLocationRelativeTo(null);
+        frame.setVisible(true);
+    }
+
     //main
     public static void main (String[] args){
         try{
@@ -114,7 +158,15 @@ public class Server {
 
         ServerSocket serverSocket = new ServerSocket(1234);
         Server server = new Server(serverSocket);
-        server.openServer();
+        
+        
+        server.openServer(ipAddress);
+
+        ///open the window here (don't pass in any arguments)
+
+        
+        
+
         }
         catch(IOException e){
             e.printStackTrace();
