@@ -133,7 +133,7 @@ public class Server {
             }
         });
 
-        // Add the scrollPane and the copyButton to the JFrame
+        //add the scroll pane and the copybutton to the frame
         frame.add(scrollPane, BorderLayout.CENTER);
         frame.add(copyButton, BorderLayout.SOUTH);
 

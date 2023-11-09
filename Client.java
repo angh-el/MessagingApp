@@ -1,302 +1,240 @@
-import java.net.Socket;
-import java.io.*;
-import java.io.BufferedWriter;
-import java.io.BufferedReader;
-import java.util.Scanner;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.*;
+import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
-public class Client{
-    
+public class Client {
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
-    
-    
     private String username;
-    private String roomCode;
 
+    private JFrame connectFrame;
+    private JTextField roomCodeField;
+    private JTextField usernameField;
 
+    private JFrame mainChatFrame;
+    private JTextArea topTextArea;
+    private JTextField bottomTextField;
+    private JButton sendMessageButton;
 
-    public Client (Socket socket, String username){
-        try{
-            this.socket = socket;
-            this.bufferedWriter = new BufferedWriter( new OutputStreamWriter(socket.getOutputStream()));
-            this.bufferedReader = new BufferedReader ( new InputStreamReader(socket.getInputStream()));
-            this.username = username;
-        }
-        catch (IOException e){
-            close(socket, bufferedReader, bufferedWriter);
-        }
+    private boolean firstMessageSent = false;
+
+    public Client() {
+        //smaller connection window
+        createConnectWindow();
     }
 
+    private void createConnectWindow() {
+        connectFrame = new JFrame("Connect to Chat");
+        connectFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        connectFrame.setSize(300, 150);
 
-    public void sendMessage(){
-        try{
-            bufferedWriter.write(username);
-            bufferedWriter.newLine();
-            bufferedWriter.flush();
+        JPanel connectPanel = new JPanel(new GridLayout(3, 2));
 
-            Scanner scanner = new Scanner (System.in);
+        roomCodeField = new JTextField();
+        usernameField = new JTextField();
 
-            while (socket.isConnected()){
-                String message = scanner.nextLine();
-                bufferedWriter.write(username + ": " + message);
-                bufferedWriter.newLine();
-                bufferedWriter.flush();
-            }
-        }
-        catch (IOException e){
-            close(socket, bufferedReader, bufferedWriter);
-        }
+        connectPanel.add(new JLabel("Room Code:"));
+        connectPanel.add(roomCodeField);
+        connectPanel.add(new JLabel("Nickname:"));
+        connectPanel.add(usernameField);
 
-
-
-    }
-
-    public void waitMessage(){
-        new Thread(new Runnable(){
+        JButton connectButton = new JButton("Connect");
+        connectButton.addActionListener(new ActionListener() {
             @Override
-            public void run(){
-                String incomingMessage;
+            public void actionPerformed(ActionEvent e) {
+                String roomCode = roomCodeField.getText();
+                String username = usernameField.getText();
 
-                while (socket.isConnected()){
-                    try{
-                        incomingMessage = bufferedReader.readLine();
-                        System.out.println(incomingMessage);
+                if (!roomCode.isEmpty() && !username.isEmpty()) {
+                    //connect to the chat server
+                    connectToServer(roomCode, username);
 
-                    }
-                    catch (IOException e){
-                        close(socket, bufferedReader, bufferedWriter);
-                    }
+                    //close the connection window
+                    connectFrame.setVisible(false);
+                } else {
+                    JOptionPane.showMessageDialog(connectFrame, "Room code and nickname cannot be empty");
+                }
+            }
+        });
+        connectPanel.add(connectButton);
 
+        connectFrame.getContentPane().add(connectPanel);
+        connectFrame.setVisible(true);
+    }
+
+    private void connectToServer(String roomCode, String username) {
+        try {
+            String ipAddress = decryptIP(roomCode);
+
+            //connect to the server
+            socket = new Socket(ipAddress, 1234);
+            bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+            this.username = username;
+
+
+            createAndShowChatWindow();
+
+            //start listening for incoming messages
+            waitMessage();
+        } catch (IOException e) {
+            e.printStackTrace();
+            close(socket, bufferedReader, bufferedWriter);
+        }
+    }
+
+    private void createAndShowChatWindow() {
+        mainChatFrame = new JFrame("Chat Window - " + username);
+        mainChatFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mainChatFrame.setSize(400, 300);
+
+        topTextArea = new JTextArea();
+        topTextArea.setEditable(false);
+        topTextArea.setLineWrap(true); 
+        topTextArea.setWrapStyleWord(true); 
+
+        JScrollPane scrollPane = new JScrollPane(topTextArea);
+        mainChatFrame.getContentPane().add(scrollPane, BorderLayout.CENTER);
+
+        bottomTextField = new JTextField();
+        bottomTextField.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sendMessage();
+            }
+        });
+
+        sendMessageButton = new JButton("Send Message");
+        sendMessageButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                sendMessage();
+            }
+        });
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(bottomTextField, BorderLayout.CENTER);
+        bottomPanel.add(sendMessageButton, BorderLayout.EAST);
+
+        mainChatFrame.getContentPane().add(bottomPanel, BorderLayout.SOUTH);
+
+        mainChatFrame.setVisible(true);
+    }
+
+
+    private void sendMessage() {
+        try {
+            String message = bottomTextField.getText();
+            if (!message.isEmpty()) {
+                if (!firstMessageSent) {
+                    
+                    bufferedWriter.write(username + " has joined the chat.");
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+
+
+
+
+                    appendMessageToTopTextArea(username + " has joined the chat.");
+
+                    firstMessageSent = true;
+                } else {
+
+
+                    bufferedWriter.write(username + ": " + message);
+                    bufferedWriter.newLine();
+                    bufferedWriter.flush();
+
+                    
+                    appendMessageToTopTextArea(username + ": " + message);
                 }
 
+                
+                bottomTextField.setText("");
+            }
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            close(socket, bufferedReader, bufferedWriter);
+        }   
+    }
 
+
+    private void waitMessage() {
+        new Thread(() -> {
+            String incomingMessage;
+
+            while (socket.isConnected()) {
+                try {
+                    incomingMessage = bufferedReader.readLine();
+
+                    if (incomingMessage != null) {
+                        //show the incoming message
+                        appendMessageToTopTextArea(incomingMessage);
+                    }
+
+                } catch (IOException e) {
+                    close(socket, bufferedReader, bufferedWriter);
+                }
             }
         }).start();
     }
 
+    private void appendMessageToTopTextArea(String message) {
+        SwingUtilities.invokeLater(() -> {
+            topTextArea.append(message + "\n");
+        });
+    }
 
-    public void close (Socket socker, BufferedReader bufferedReader, BufferedWriter bufferedWriter){
-        try{
-            if (bufferedReader != null){
+    private void close(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
+        try {
+            if (bufferedReader != null) {
                 bufferedReader.close();
             }
-            if (bufferedWriter != null){
+            if (bufferedWriter != null) {
                 bufferedWriter.close();
             }
-            if (socket != null){
+            if (socket != null) {
                 socket.close();
             }
-        }
-        catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private String decryptIP(String ipAddress) {
+        Map<Character, Character> charMap = new HashMap<>();
+        charMap.put('f', '0');
+        charMap.put('D', '1');
+        charMap.put('4', '2');
+        charMap.put('Z', '3');
+        charMap.put('L', '4');
+        charMap.put('U', '5');
+        charMap.put('y', '6');
+        charMap.put('e', '7');
+        charMap.put('Q', '8');
+        charMap.put('o', '9');
+        charMap.put('R', '.');
 
-    public static String decryptIP(String ipAddress){
-        // System.out.println("Your IP address: " + ipAddress);
-        
         StringBuilder stringBuilder = new StringBuilder();
 
-        for (int i = 0; i < ipAddress.length(); i++){
+        for (int i = 0; i < ipAddress.length(); i++) {
             char chr = ipAddress.charAt(i);
-            if (chr == 'f'){
-                stringBuilder.append('0');
-            }
-            if (chr == 'D'){
-                stringBuilder.append('1');
-            }
-            if (chr == '4'){
-                stringBuilder.append('2');
-            }
-            if (chr == 'Z'){
-                stringBuilder.append('3');
-            }
-            if (chr == 'L'){
-                stringBuilder.append('4');
-            }
-            if (chr == 'U'){
-                stringBuilder.append('5');
-            }
-            if (chr == 'y'){
-                stringBuilder.append('6');
-            }
-            if (chr == 'e'){
-                stringBuilder.append('7');
-            }
-            if (chr == 'Q'){
-                stringBuilder.append('8');
-            }
-            if (chr == 'o'){
-                stringBuilder.append('9');
-            }
-            if (chr == 'R'){
-                stringBuilder.append('.');
-            }
-            // else{
-            //     stringBuilder.append(chr);
-            // }
-
-
-
-
+            char replacement = charMap.getOrDefault(chr, chr);
+            stringBuilder.append(replacement);
         }
-        ipAddress = stringBuilder.toString();
 
-        // System.out.println("Your IP address: " + ipAddress);
-
-        return ipAddress;
+        return stringBuilder.toString();
     }
 
-
-    // public static String getRoomCode(){
-    //     return roomCode;
-    // }
-
-
-    // public static String[] get_data(String username, String ipAddress){
-    //     String[] data = new String[2]
-
-    //     //index 0 is username
-    //     //index 1 is ip
-
-    //     data[0];
-
-    // }
-
-    // public static void setData(String username, String ipAddress){
-    //     this.username = username;
-    //     this.ipAddress = getRoomCode();
-    // }
-
-
-
-public static void loginWindow() {
-    JFrame frame = new JFrame("Connect");
-    frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-    frame.setSize(300, 200); // Set window size
-
-    // Create a JPanel to hold the components
-    JPanel panel = new JPanel();
-
-    // Create JLabels for the username and room code input boxes
-    JLabel usernameLabel = new JLabel("Username:");
-    JLabel roomCodeLabel = new JLabel("Room Code:");
-
-    // Create JTextFields for username and room code
-    JTextField usernameField = new JTextField(20);
-    JTextField roomCodeField = new JTextField(20);
-
-    // Create a JLabel for displaying the error message
-    JLabel errorLabel = new JLabel();
-    errorLabel.setForeground(Color.RED); // Set the color to red
-
-    JButton connectButton = new JButton("Connect");
-    connectButton.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
-            String username = usernameField.getText();
-            String roomCode = roomCodeField.getText();
-
-            if (username.isEmpty() || roomCode.isEmpty()) {
-                // Display the error message and do not close the window
-                errorLabel.setText("Error: Username and Room Code are required.");
-            } else {
-                // Clear the error message and close the window
-                errorLabel.setText("");
-                frame.dispose();
-                connect(username, roomCode);
-            }
-        }
-    });
-
-    // Add components to the panel
-    panel.add(usernameLabel);
-    panel.add(usernameField);
-    panel.add(roomCodeLabel);
-    panel.add(roomCodeField);
-    panel.add(connectButton);
-
-    // Add the error label to the panel
-    panel.add(errorLabel);
-
-    frame.add(panel);
-
-    frame.setLocationRelativeTo(null);
-
-    frame.setVisible(true);
-}
-
-
-
-
-
-    public static void connect(String username, String ipAddress){
-        
-        try{
-        Socket socket = new Socket (decryptIP(ipAddress), 1234);
-        Client client = new Client (socket, username);
-
-
-        client.waitMessage();
-        client.sendMessage();
-
-        }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-
+    public static void main(String[] args) {
+        //start client and create window
+        SwingUtilities.invokeLater(() -> new Client());
     }
-
-
-    public static void main (String[] args){
-
-
-        // try{
-
-        loginWindow();
-
-        // Scanner scanner = new Scanner (System.in);
-
-        // System.out.println("Enter the room code");
-        // String ipAddress = scanner.nextLine();
-
-        // ipAddress = decryptIP(ipAddress);
-
-
-        // // roomCode = decryptIP(roomCode);
-
-        // System.out.println("Enter Username");
-        // String username = scanner.nextLine();
-
-        
-        
-        // // Socket socket = new Socket ("localhost", 1234);
-        // Socket socket = new Socket (ipAddress, 1234);
-        // // Socket socket = new Socket ("w232esd.303", 1234);
-
-        // // Socket socket = new Socket (roomCode, 1234);
-
-        // Client client = new Client (socket, username);
-
-        // client.waitMessage();
-        // client.sendMessage();
-
-        // }
-
-        // catch (IOException e){
-        //     e.printStackTrace();
-        // }
-
-
-    }
-
-
-
 }
